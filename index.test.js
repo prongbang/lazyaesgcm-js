@@ -1,14 +1,28 @@
-const {generateKey, encrypt, decrypt, generateKeyPair} = require("./index");
+const {generateKey, encrypt, decrypt, generateKeyPair, sharedKey} = require("./index");
 
 test('Should return key pair when generate key pair success', async () => {
     // Given
     const keySize = 64;
 
     // When
-    let keypair = await generateKeyPair();
+    let keypair = generateKeyPair();
 
     // Then
     expect(keypair.pk.length).toBe(keySize);
+    expect(keypair.sk.length).toBe(keySize);
+});
+
+test('Should return shared key when key exchange success', async () => {
+    // Given
+    const clientKp = generateKeyPair();
+    const serverKp = generateKeyPair();
+
+    // When
+    const clientSharedKey = sharedKey(clientKp.sk, serverKp.pk);
+    const serverSharedKey = sharedKey(serverKp.sk, clientKp.pk);
+
+    // Then
+    expect(clientSharedKey).toBe(serverSharedKey);
 });
 
 test('Should return secret key when generate key success', async () => {
@@ -24,7 +38,7 @@ test('Should return secret key when generate key success', async () => {
 
 test('Should return ciphertext when encrypt success', async () => {
     // Given
-    let key = "87e8923bdee80b90b657bcb07fd015ab05b0fb7969ac3e03ea7393de85791f80";
+    let key = "fa6cd8fb8d2d4525def2b89ee791c1af5bf4e2219f37a5e1603936d06fc2bd56";
     let plaintext = 'Hello';
 
     // When
@@ -36,8 +50,8 @@ test('Should return ciphertext when encrypt success', async () => {
 
 test('Should return plaintext when decrypt success', async () => {
     // Given
-    let key = "87e8923bdee80b90b657bcb07fd015ab05b0fb7969ac3e03ea7393de85791f80";
-    let ciphertext = '740ca834dd0f2b92552942d7d4679bf50c20d720d086f51d3edc8fa7f311b99461';
+    let key = "fa6cd8fb8d2d4525def2b89ee791c1af5bf4e2219f37a5e1603936d06fc2bd56";
+    let ciphertext = 'd111c7590154d08f2b378ffbceebe629331ddfe5ce0a8ee02f185757ee8c90edb3';
 
     // When
     let plaintext = await decrypt(ciphertext, key);

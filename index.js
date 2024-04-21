@@ -1,39 +1,18 @@
-const crypto = require('crypto');
+const x25519 = require('@stablelib/x25519');
 
-async function generateKeyPair() {
-    const keyPair = await crypto.subtle.generateKey(
-        {
-            name: 'X25519',
-        },
-        true,
-        ['deriveKey'],
-    );
-
-    // Export the public key
-    const publicKey = await crypto.subtle.exportKey("raw", keyPair.publicKey);
-
-    // Convert public key to hexadecimal string
-    const hexPublicKey = await toHex(publicKey);
-
+function generateKeyPair() {
+    const kp = x25519.generateKeyPair();
     return {
-        pk: hexPublicKey,
-        sk: keyPair.privateKey,
-    };
+        pk: toHex(kp.publicKey),
+        sk: toHex(kp.secretKey),
+    }
 }
 
-async function exportCryptoKeyToHex(key) {
-    const exportedKey = await crypto.subtle.exportKey("raw", key);
-    const exportedKeyBytes = new Uint8Array(exportedKey);
-    return await toHex(exportedKeyBytes);
-}
-
-async function generateKeyPair1() {
-    const {publicKey, privateKey} = crypto.generateKeyPairSync('x25519');
-    const publicKeyRaw = publicKey.export({type: 'spki', format: 'der'});
-    const privateKeyRaw = privateKey.export({type: 'pkcs8', format: 'der'});
-    const pk = publicKeyRaw.toString('hex');
-    const sk = privateKeyRaw.toString('hex');
-    return {pk, sk};
+function sharedKey(sk, pk) {
+    const publicKey = fromHex(pk);
+    const secretKey = fromHex(sk);
+    const key = x25519.sharedKey(secretKey, publicKey);
+    return toHex(key)
 }
 
 function appendUint8Array(arr1, arr2) {
@@ -44,7 +23,7 @@ function fromHex(hex) {
     return Uint8Array.from(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
 }
 
-async function toHex(arrBuf) {
+function toHex(arrBuf) {
     return Array.from(new Uint8Array(arrBuf))
         .map(b => b.toString(16).padStart(2, "0"))
         .join("");
@@ -68,9 +47,7 @@ async function toCryptoKey(keyHex) {
 
 // Generate a 256-bit key (32 bytes)
 async function generateKey() {
-    const key = await crypto.subtle.generateKey({
-        name: "AES-GCM", length: 256
-    }, true, ["encrypt", "decrypt"]);
+    const key = await crypto.subtle.generateKey({name: "AES-GCM", length: 256}, true, ["encrypt", "decrypt"]);
 
     const keyBuf = await crypto.subtle.exportKey("raw", key);
     return toHex(keyBuf);
@@ -81,13 +58,11 @@ async function encrypt(data, key) {
     const cryptoKey = await toCryptoKey(key);
     const dataEncode = await encode(data);
 
-    const encrypted = await crypto.subtle.encrypt({
-        name: "AES-GCM", iv: iv
-    }, cryptoKey, dataEncode);
+    const encrypted = await crypto.subtle.encrypt({name: "AES-GCM", iv: iv}, cryptoKey, dataEncode);
 
     // Convert IV and encrypted data to hexadecimal strings
     let ivEncrypted = appendUint8Array(iv, new Uint8Array(encrypted));
-    return await toHex(ivEncrypted);
+    return toHex(ivEncrypted);
 }
 
 async function decrypt(encryptedHex, key) {
@@ -97,13 +72,15 @@ async function decrypt(encryptedHex, key) {
     const encryptedData = encrypted.slice(nonceSize);
     const cryptoKey = await toCryptoKey(key);
 
-    const decrypted = await crypto.subtle.decrypt({
-        name: "AES-GCM", iv: iv
-    }, cryptoKey, encryptedData);
+    const decrypted = await crypto.subtle.decrypt({name: "AES-GCM", iv: iv}, cryptoKey, encryptedData);
 
     return await decode(decrypted);
 }
 
 module.exports = {
-    generateKey, encrypt, decrypt, generateKeyPair,
+    generateKey,
+    encrypt,
+    decrypt,
+    generateKeyPair,
+    sharedKey,
 };

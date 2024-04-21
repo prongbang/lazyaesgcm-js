@@ -20,5 +20,8 @@
   "bugs": {
     "url": "https://github.com/prongbang/lazyaesgcm-js/issues"
   },
-  "homepage": "https://github.com/prongbang/lazyaesgcm-js#readme"
+  "homepage": "https://github.com/prongbang/lazyaesgcm-js#readme",
+  "dependencies": {
+    "@stablelib/x25519": "^1.0.3"
+  }
 }
